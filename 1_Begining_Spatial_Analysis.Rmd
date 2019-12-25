@@ -2,15 +2,19 @@
 title: "Lagos Spatial Analysis"
 author: "Phuntsho"
 date: "25/12/2019"
-output: html_document
+output:
+  pdf_document: default
+  word_document: default
+  html_document: default
+always_allow_html: yes
 ---
 
-```{r setup, include=FALSE}
+```{r}
 library(tidyverse) #tidy packcages
 library(sf) # Package that can read and create shapefiles
 library(mapview) # Interactive maps
 library(LAGOSNE) # lots of clean datasets
-library(USAboundaries)
+library(USAboundaries) # Package that conyains the USA Boundary Data
 ```
 
 # LAGOS Analysis
