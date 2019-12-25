@@ -1,0 +1,102 @@
+---
+title: "Lake Water Quality Analysis"
+author: "Phuntsho"
+date: "25/12/2019"
+output: pdf_document
+---
+
+```{r }
+library(tidyverse) #tidy packcages
+library(sf) # Package that can read and create shapefiles
+library(mapview) # Interactive maps
+library(LAGOSNE) # lots of clean datasets
+library(USAboundaries) # Package that conyains the USA Boundary Data
+library(lubridate) # dealing with the date and time
+```
+
+# LAGOS Analysis
+
+## Loading in data
+
+### First download and then specifically grab the locus (or site lat lon)
+
+
+```{r data-read}
+# download script 
+lagosne_get(dest_folder = LAGOSNE:::lagos_path())
+
+#Load lagos data
+lagos <- lagosne_load()
+
+# lagos dataset is list of lists and check what lists of data are in the lagos 
+names(lagos)
+
+# Garb the lake center information
+lake_centers <- lagos$locus
+
+# Make spatial objects of laje centers
+spatial_lake <- st_as_sf(lake_centers,coords=c("nhd_long", "nhd_lat"),
+                         crs=4326)
+
+# Grab the water quality data
+nutr <- lagos$epi_nutr
+
+#look at the colunm names
+names(nutr)
+```
+
+
+### Subset columnsn nutr to only keep key info
+```{r}
+clarity_only <- nutr %>% 
+  select(lagoslakeid,sampledate,chla,secchi) # %>% 
+  #mutate(sampledate = as.character(sampledate) %>% mdy(.)) #change to date format using lubridate library incase not read as date format
+head(clarity_only)
+summary(clarity_only)
+
+```
+
+### Keep sites atleast 100 observations
+```{r}
+# Look at the number of rows of the dataset
+nrow(clarity_only)
+
+count_clarity <- clarity_only %>% 
+  filter(!is.na(chla),
+         !is.na(secchi))
+# Keep only the lakes with atleast 200 observations of sacchi and chla
+chla_sacchi_200 <- clarity_only %>% 
+  group_by(lagoslakeid) %>% 
+  mutate(count = n()) %>% 
+  filter(count>200)
+
+
+```
+
+
+### join the water quality data to spatail data
+```{r}
+spatial_200 <- inner_join(spatial_lake, chla_sacchi_200 %>% 
+                            distinct(lagoslakeid,.keep_all=T),
+                          by = "lagoslakeid")
+
+mapview(spatial_200)
+```
+
+### Mean chla map
+```{r}
+mean_value_200 <- chla_sacchi_200 %>% 
+  group_by(lagoslakeid) %>% 
+  summarise(mean_chl=mean(chla,na.rm = T),
+            mean_secchi=mean(secchi,na.rm = T)) %>% 
+  filter(!is.na(mean_chl),
+         !is.na(mean_secchi)) %>% 
+  mutate(log10_mean_chl = log10(mean_chl))
+
+mean_spatial <- inner_join(spatial_lake, mean_value_200,
+                          by = "lagoslakeid")
+
+mapview(mean_spatial, zcol="log10_mean_chl")
+```
+
+
