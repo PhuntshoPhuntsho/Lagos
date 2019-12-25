@@ -1,0 +1,90 @@
+---
+title: "Lagos Spatial Analysis"
+author: "Phuntsho"
+date: "25/12/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(tidyverse) #tidy packcages
+library(sf) # Package that can read and create shapefiles
+library(mapview) # Interactive maps
+library(LAGOSNE) # lots of clean datasets
+library(USAboundaries)
+```
+
+# LAGOS Analysis
+
+## Loading in data
+
+### First download and then specifically grab the locus (or site lat lon)
+
+
+```{r data-read}
+# download script 
+lagosne_get(dest_folder = LAGOSNE:::lagos_path())
+
+#Load lagos data
+lagos <- lagosne_load()
+
+# lagos dataset is list of lists and check what lists of data are in the lagos 
+names(lagos)
+
+# Garb the lake center information
+lake_centers <- lagos$locus
+
+```
+
+### Convert to spatial data
+
+```{r}
+names(lake_centers) # check the column names or variables fo the lake centres
+# Look at the structure of the 
+str(lake_centers)
+
+# Base R style index
+# View(lake_centers[1:100,]) # first rows 1 to 100 and all the columns
+
+# Similarly Tidyverse version
+# View(lake_centers %>% slice(1:100))
+
+# suite of sf functions check for st_as_sf
+# ?st_as_sf
+
+# take the table data and convert that to a spatial object using st_as_sf
+
+spatial_lake <- st_as_sf(lake_centers,coords=c("nhd_long", "nhd_lat"),
+                         crs=4326) %>% 
+  st_transform(2163)
+# Subet for ploting
+subset_spatial <- spatial_lake %>%
+  slice(1:100)
+
+# Dynamic mapview 
+
+mapview(subset_spatial)
+```
+
+### Subset only Minesota
+
+```{r}
+
+states <- us_states()
+
+mapview(states)
+
+minnesota <- states %>% 
+  filter(name == "Minnesota") %>% 
+  st_transform(2163)
+
+# Subset lakes based on spatial position
+minnesota_lakes <- spatial_lake[minnesota,]
+
+#ploting first 100 lakes
+minnesota_lakes %>% 
+  slice(1:100) %>% 
+  arrange(lake_area_ha) %>% 
+  mapview(.,zcol="lake_area_ha")
+```
+
+
